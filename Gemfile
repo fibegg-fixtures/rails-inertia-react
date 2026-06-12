@@ -11,7 +11,7 @@ gem "inertia_rails", "~> 3.7"
 
 # Background work
 gem "sidekiq", "~> 7.3"
-gem "sidekiq-cron", "~> 2.0"
+gem "sidekiq-cron", "~> 2.4"
 gem "connection_pool", "~> 2.5"  # sidekiq 7.3 is incompatible with connection_pool 3.x
 
 # Object storage (Active Storage → MinIO over the S3 API)
