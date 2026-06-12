@@ -1,0 +1,5 @@
+heartbeat:
+  cron: "* * * * *"
+  class: "HeartbeatJob"
+  description: "Fires every minute and increments a Redis counter."
+  queue: default

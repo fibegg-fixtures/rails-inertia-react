@@ -1,0 +1,36 @@
+# syntax=docker/dockerfile:1.7
+# Dev image: includes build toolchain + node + npm so we can run rails, sidekiq,
+# and vite dev server with bind-mounted source code and live code reload.
+
+ARG RUBY_VERSION=3.4-slim-bookworm
+ARG NODE_VERSION=22
+
+FROM ruby:${RUBY_VERSION}
+
+ARG NODE_VERSION
+
+ENV LANG=C.UTF-8 \
+    BUNDLE_PATH=/usr/local/bundle \
+    PATH=/usr/local/bundle/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    RAILS_LOG_TO_STDOUT=1
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential libpq-dev libyaml-dev pkg-config \
+      git curl ca-certificates postgresql-client \
+ && curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /rails
+
+# Pre-install gems and node modules to bake into image; bind mount overlays source at runtime.
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4 --retry 3
+
+COPY package.json package-lock.json ./
+RUN npm ci --include=dev
+
+EXPOSE 3000 3036
+
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3000"]
