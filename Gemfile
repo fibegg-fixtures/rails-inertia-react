@@ -16,7 +16,7 @@ gem "connection_pool", "~> 2.5"  # sidekiq 7.3 is incompatible with connection_p
 
 # Object storage (Active Storage → MinIO over the S3 API)
 gem "aws-sdk-s3", "~> 1.180", require: false
-gem "image_processing", "~> 1.13"
+gem "image_processing", "~> 2.0"
 
 # Authorization
 gem "cancancan", "~> 3.6"
