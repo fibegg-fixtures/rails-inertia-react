@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* Import daisyui by explicit JS path so Node's package-resolver doesn't pick the
+ * "browser" field (a .css file), which trips Vite's ESM loader. */
+@plugin "daisyui/index.js";
+
+html, body {
+  min-height: 100vh;
+}

@@ -1,0 +1,153 @@
+name: rails-inertia-react
+
+x-rails-env: &rails-env
+  RAILS_ENV: development
+  RAILS_LOG_TO_STDOUT: "1"
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: rails
+  POSTGRES_PASSWORD: rails
+  POSTGRES_DB: app_development
+  POSTGRES_DB_TEST: app_test
+  REDIS_URL: redis://redis:6379/0
+  ACTIVE_STORAGE_SERVICE: amazon
+  S3_ENDPOINT: http://minio:9000
+  S3_REGION: us-east-1
+  S3_BUCKET: rails-uploads
+  S3_ACCESS_KEY_ID: minioadmin
+  S3_SECRET_ACCESS_KEY: minioadmin
+  SIDEKIQ_USER: ${SIDEKIQ_USER:-sidekiq}
+  SIDEKIQ_PASSWORD: ${SIDEKIQ_PASSWORD:-sidekiq}
+  # vite_ruby finds the dev server here:
+  VITE_RUBY_HOST: vite
+  VITE_RUBY_PORT: "3036"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: rir-postgres
+    environment:
+      POSTGRES_USER: rails
+      POSTGRES_PASSWORD: rails
+      POSTGRES_DB: app_development
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "rails"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: rir-redis
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+
+  minio:
+    image: minio/minio:latest
+    container_name: rir-minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: rir-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        mc alias set local http://minio:9000 minioadmin minioadmin
+        mc mb --ignore-existing local/rails-uploads
+        mc anonymous set download local/rails-uploads
+        echo "MinIO bucket ready."
+    restart: "no"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: rails-inertia-react:dev
+    container_name: rir-web
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *rails-env
+    ports:
+      - "${RAILS_PORT:-3000}:3000"
+    volumes:
+      - .:/rails
+      - rails_node_modules:/rails/node_modules
+      - bundle_cache:/usr/local/bundle
+    entrypoint: ["bin/docker-entrypoint"]
+    command: ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+
+  vite:
+    image: rails-inertia-react:dev
+    container_name: rir-vite
+    depends_on:
+      web:
+        condition: service_started
+    environment:
+      <<: *rails-env
+    ports:
+      - "${VITE_PORT:-3036}:3036"
+    volumes:
+      - .:/rails
+      - rails_node_modules:/rails/node_modules
+      - bundle_cache:/usr/local/bundle
+    command: ["bundle", "exec", "vite", "dev"]
+
+  sidekiq:
+    image: rails-inertia-react:dev
+    container_name: rir-sidekiq
+    depends_on:
+      web:
+        condition: service_started
+    environment:
+      <<: *rails-env
+    volumes:
+      - .:/rails
+      - rails_node_modules:/rails/node_modules
+      - bundle_cache:/usr/local/bundle
+    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  rails_node_modules:
+  bundle_cache:

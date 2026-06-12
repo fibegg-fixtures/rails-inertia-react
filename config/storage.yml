@@ -1,0 +1,18 @@
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+# MinIO (S3-compatible). All endpoints/credentials come from env so the same
+# config works locally with docker compose and in production with real S3.
+amazon:
+  service: S3
+  endpoint: <%= ENV.fetch("S3_ENDPOINT", "http://minio:9000") %>
+  access_key_id: <%= ENV.fetch("S3_ACCESS_KEY_ID", "minioadmin") %>
+  secret_access_key: <%= ENV.fetch("S3_SECRET_ACCESS_KEY", "minioadmin") %>
+  region: <%= ENV.fetch("S3_REGION", "us-east-1") %>
+  bucket: <%= ENV.fetch("S3_BUCKET", "rails-uploads") %>
+  force_path_style: true

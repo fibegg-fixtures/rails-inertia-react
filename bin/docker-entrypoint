@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Used by the docker-compose `web` service: prepares DB then exec's the given command.
+set -euo pipefail
+
+cd /rails
+
+echo "[entrypoint] waiting for postgres at ${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}..."
+until pg_isready -h "${POSTGRES_HOST:-postgres}" -p "${POSTGRES_PORT:-5432}" -U "${POSTGRES_USER:-rails}" >/dev/null 2>&1; do
+  sleep 1
+done
+
+echo "[entrypoint] running db:prepare..."
+bundle exec rails db:prepare
+
+# Make sure node_modules in the bind-mounted volume is populated.
+if [ ! -d node_modules ] || [ ! -x node_modules/.bin/vite ]; then
+  echo "[entrypoint] installing npm dependencies..."
+  npm ci --include=dev || npm install
+fi
+
+exec "$@"
