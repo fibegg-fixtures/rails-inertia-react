@@ -10,7 +10,7 @@ gem "vite_rails", "~> 3.0"
 gem "inertia_rails", "~> 3.7"
 
 # Background work
-gem "sidekiq", "~> 7.3"
+gem "sidekiq", "~> 8.0"
 gem "sidekiq-cron", "~> 2.0"
 gem "connection_pool", "~> 2.5"  # sidekiq 7.3 is incompatible with connection_pool 3.x
 
