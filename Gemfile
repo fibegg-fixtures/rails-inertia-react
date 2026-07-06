@@ -6,7 +6,7 @@ gem "pg", "~> 1.5"
 gem "puma", ">= 5.0"
 
 # Frontend: Vite + Inertia (React on the page side)
-gem "vite_rails", "~> 3.0"
+gem "vite_rails", "~> 3.11"
 gem "inertia_rails", "~> 3.7"
 
 # Background work
