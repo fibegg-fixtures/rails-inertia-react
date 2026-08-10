@@ -15,7 +15,7 @@ gem "sidekiq-cron", "~> 2.0"
 gem "connection_pool", "~> 2.5"  # sidekiq 7.3 is incompatible with connection_pool 3.x
 
 # Object storage (Active Storage → MinIO over the S3 API)
-gem "aws-sdk-s3", "~> 1.180", require: false
+gem "aws-sdk-s3", "~> 1.229", require: false
 gem "image_processing", "~> 1.13"
 
 # Authorization
